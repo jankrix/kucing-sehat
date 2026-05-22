@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KucingKu Admin</title>
+<style>
+  :root {
+    --bg:       #0d1117;
+    --bg2:      #161b22;
+    --bg3:      #21262d;
+    --border:   #30363d;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --accent:   #ff6b6b;
+    --success:  #3fb950;
+    --warning:  #d29922;
+    --danger:   #f85149;
+    --info:     #58a6ff;
+    --radius:   8px;
+    --font:     -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+  a { color: var(--info); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Layout */
+  #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .login-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; width: 360px; }
+  .login-card h1 { font-size: 22px; margin-bottom: 8px; }
+  .login-card p { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+
+  #app { display: none; height: 100vh; display: flex; flex-direction: column; }
+  .topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+  .topbar .logo { font-weight: 700; font-size: 16px; }
+  .topbar .logo span { color: var(--accent); }
+  .topbar .spacer { flex: 1; }
+  .topbar .logout-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: var(--radius); cursor: pointer; font-size: 13px; }
+  .topbar .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  .tabs { background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; gap: 0; padding: 0 20px; overflow-x: auto; }
+  .tab { padding: 12px 18px; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  #content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* Components */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .stat-card .label { font-size: 12px; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+
+  input, select, textarea {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px;
+    border-radius: var(--radius); font-size: 13px; font-family: var(--font); outline: none; width: 100%;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .form-row label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .form-field { flex: 1; min-width: 120px; }
+
+  .btn { padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 13px; font-family: var(--font); transition: all 0.2s; white-space: nowrap; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); color: #fff; border: none; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-danger { color: var(--danger); border-color: var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: rgba(63,185,80,.2); color: var(--success); }
+  .badge-red { background: rgba(248,81,73,.2); color: var(--danger); }
+  .badge-yellow { background: rgba(210,153,34,.2); color: var(--warning); }
+  .badge-blue { background: rgba(88,166,255,.2); color: var(--info); }
+  .badge-gray { background: var(--bg3); color: var(--muted); }
+
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .section-header h2 { font-size: 16px; }
+
+  .toast-area { position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .toast { padding: 10px 16px; border-radius: var(--radius); font-size: 13px; animation: fadeIn .25s ease; max-width: 320px; }
+  .toast-success { background: #1a3a2a; border: 1px solid var(--success); color: var(--success); }
+  .toast-error { background: #3a1a1a; border: 1px solid var(--danger); color: var(--danger); }
+  .toast-info { background: var(--bg3); border: 1px solid var(--border); color: var(--text); }
+  @keyframes fadeIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
+
+  .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty { text-align: center; padding: 40px; color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+  .section-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .s-tab { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; color: var(--muted); background: none; transition: all .2s; }
+  .s-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--bg3); border: 1px solid var(--border); border-radius: 22px; cursor: pointer; transition: .3s; }
+  .toggle-slider:before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: var(--muted); border-radius: 50%; transition: .3s; }
+  .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(18px); background: #fff; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0d1117;">
+  <div class="login-card" style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:32px;width:360px;max-width:90vw;">
+    <h1 style="font-size:22px;margin-bottom:8px;color:#e6edf3;">🐱 KucingKu Admin</h1>
+    <p style="color:#8b949e;font-size:13px;margin-bottom:24px;">Masukkan admin secret untuk akses dashboard.</p>
+    <div style="margin-bottom:12px;">
+      <input type="password" id="secretInput" placeholder="Admin secret..." autofocus
+        style="width:100%;background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:10px 12px;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;">
+    </div>
+    <button class="btn btn-primary" style="width:100%;background:#ff6b6b;color:#fff;border:none;padding:10px;border-radius:8px;font-size:14px;cursor:pointer;" id="loginBtn">Login</button>
+    <div id="loginError" style="color:#f85149;font-size:12px;margin-top:8px;display:none;"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <div class="topbar">
+    <div class="logo">🐱 <span>KucingKu</span> Admin</div>
+    <div class="spacer"></div>
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </div>
+  <div class="tabs" id="tabBar"></div>
+  <div id="content"></div>
+</div>
+
+<div class="toast-area" id="toastArea"></div>
+
+<script>
+// ── State ───────────────────────────────────────────────────
+let secret = '';
+const BASE = '/api/admin';
+
+// ── Auth ─────────────────────────────────────────────────────
+document.getElementById('loginBtn').onclick = doLogin;
+document.getElementById('secretInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogin() {
+  const s = document.getElementById('secretInput').value.trim();
+  if (!s) return;
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Memeriksa...';
+  try {
+    await api('GET', '/stats', null, s);
+    secret = s;
+    sessionStorage.setItem('adminSecret', s);
+    showDashboard();
+  } catch {
+    document.getElementById('loginError').style.display = '';
+    document.getElementById('loginError').textContent = 'Secret tidak valid atau server error.';
+  }
+  btn.disabled = false; btn.textContent = 'Login';
+}
+
+document.getElementById('logoutBtn').onclick = () => {
+  secret = '';
+  sessionStorage.removeItem('adminSecret');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+};
+
+// Auto-restore session — validate against API first before showing dashboard
+(async () => {
+  const saved = sessionStorage.getItem('adminSecret');
+  if (!saved) return;
+  try {
+    await api('GET', '/stats', null, saved);
+    secret = saved;
+    showDashboard();
+  } catch {
+    // Stale or invalid secret — clear it and stay on login screen
+    sessionStorage.removeItem('adminSecret');
+  }
+})();
+
+// ── API helper ────────────────────────────────────────────────
+async function api(method, path, body, overrideSecret) {
+  const s = overrideSecret || secret;
+  const res = await fetch(BASE + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById('toastArea').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── Utils ─────────────────────────────────────────────────────
+function fmtDate(s) {
+  if (!s) return '—';
+  return new Date(s).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function fmtIDR(n) { return n ? 'Rp ' + n.toLocaleString('id-ID') : '—'; }
+function badge(text, type) { return `<span class="badge badge-${type}">${text}</span>`; }
+function statusBadge(s) {
+  const map = { active: 'green', expired: 'gray', cancelled: 'red', processing: 'yellow', extracted: 'blue', confirmed: 'green', error: 'red', free: 'gray' };
+  return badge(s, map[s] || 'gray');
+}
+function confirm2(msg) { return confirm(msg); }
+
+// ── Tabs ─────────────────────────────────────────────────────
+const TABS = [
+  { id: 'dashboard',  label: '📊 Dashboard' },
+  { id: 'users',      label: '👤 Users' },
+  { id: 'labs',       label: '🧪 Lab Reports' },
+  { id: 'subs',       label: '💳 Subscriptions' },
+  { id: 'vouchers',   label: '🎟 Vouchers' },
+  { id: 'pricing',    label: '💰 Pricing' },
+  { id: 'danger',     label: '⚠️ Danger Zone' },
+];
+
+let activeTab = 'dashboard';
+
+function showDashboard() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  renderTabs();
+  loadTab('dashboard');
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tabBar');
+  bar.innerHTML = TABS.map(t => `<div class="tab ${t.id === activeTab ? 'active' : ''}" data-tab="${t.id}">${t.label}</div>`).join('');
+  bar.querySelectorAll('.tab').forEach(el => {
+    el.addEventListener('click', () => loadTab(el.dataset.tab));
+  });
+}
+
+function loadTab(id) {
+  activeTab = id;
+  renderTabs();
+  const content = document.getElementById('content');
+  content.innerHTML = '<div style="display:flex;justify-content:center;padding:40px;"><div class="spinner"></div></div>';
+  const fn = LOADERS[id];
+  if (fn) fn(content);
+}
+
+// ── TAB: Dashboard ───────────────────────────────────────────
+async function loadDashboard(el) {
+  const stats = await api('GET', '/stats').catch(() => null);
+  if (!stats) { el.innerHTML = '<div class="empty">Gagal memuat statistik.</div>'; return; }
+
+  const labs = stats.labs_by_status || {};
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="value" style="color:var(--info)">${stats.total_users}</div><div class="label">Total Users</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--success)">${stats.active_subscriptions}</div><div class="label">Active Subs</div></div>
+      <div class="stat-card"><div class="value">${stats.total_cats}</div><div class="label">Total Cats</div></div>
+      <div class="stat-card"><div class="value">${stats.total_labs}</div><div class="label">Lab Results</div></div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:14px;margin-bottom:12px;color:var(--muted);">Lab Results by Status</h3>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        ${Object.entries(labs).map(([s, n]) => `<div>${statusBadge(s)} <strong>${n}</strong></div>`).join('')}
+        ${Object.keys(labs).length === 0 ? '<div style="color:var(--muted)">No data</div>' : ''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-header"><h3 style="font-size:14px;">Quick Actions</h3></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn" onclick="loadTab('users')">Manage Users</button>
+        <button class="btn" onclick="loadTab('labs')">Review Lab Reports</button>
+        <button class="btn" onclick="loadTab('pricing')">Pricing Settings</button>
+        <button class="btn" onclick="loadTab('vouchers')">Manage Vouchers</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── TAB: Users ───────────────────────────────────────────────
+async function loadUsers(el) {
+  let users = await api('GET', '/users').catch(() => []);
+  let searchVal = '';
+
+  function render() {
+    const filtered = users.filter(u =>
+      !searchVal || (u.email || '').toLowerCase().includes(searchVal.toLowerCase())
+    );
+    el.innerHTML = `
+      <div class="section-header">
+        <h2>Users (${users.length})</h2>
+        <input type="text" placeholder="Search email..." style="width:200px;" id="userSearch" value="${searchVal}">
+      </div>
+      <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Email</th><th>Plan</th><th>Cats</th><th>Labs</th><th>Joined</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.length === 0 ? '<tr><td colspan="7" class="empty">No users found.</td></tr>' :
+            filtered.map(u => `
+              <tr>
+                <td>${u.email || '<em>no email</em>'}</td>
+                <td>${u.subscription ? statusBadge(u.subscription.plan) : badge('free', 'gray')}</td>
+                <td>${u.cat_count}</td>
+                <td>${u.lab_count}</td>
+                <td style="color:var(--muted)">${fmtDate(u.created_at)}</td>
+                <td>${u.banned ? badge('banned','red') : badge('active','green')}</td>
+                <td style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button class="btn btn-sm" onclick="resetPw('${u.id}','${u.email}')">Reset PW</button>
+                  <button class="btn btn-sm" onclick="setPw('${u.id}')">Set PW</button>
+                  <button class="btn btn-sm" onclick="grantSub('${u.id}','${u.email}')">Grant Sub</button>
+                  <button class="btn btn-sm ${u.banned ? '' : 'btn-danger'}" onclick="toggleBan('${u.id}',${u.banned})">
+                    ${u.banned ? 'Unban' : 'Ban'}
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+        </tbody>
+      </table>
+      </div>
+    `;
+    el.querySelector('#userSearch').addEventListener('input', e => { searchVal = e.target.value; render(); });
+  }
+
+  render();
+
+  window.resetPw = async (id, email) => {
+    if (!confirm2(`Send password reset email to ${email}?`)) return;
+    try { await api('POST', `/users/${id}/reset-password`); toast('Reset email sent', 'success'); } catch(e) { toast(e.message, 'error'); }
+  };
+  window.setPw = (id) => {
+    const pw = prompt('New password (min 6 chars):');
+    if (!pw || pw.length < 6) return;
+    api('POST', `/users/${id}/set-password`, { password: pw })
+      .then(() => toast('Password updated', 'success'))
+      .catch(e => toast(e.message, 'error'));
+  };
+  window.grantSub = (userId, email) => {
+    const plan = prompt(`Grant subscription to ${email}\nPlan (basic / premium):`, 'basic');
+    if (!plan) return;
+    const days = prompt('Duration (days):', '30');
+    if (!days) return;
+    api('POST', '/subscriptions', { user_id: userId, plan, days: Number(days) })
+      .then(() => { toast('Subscription granted', 'success'); loadUsers(el); })
+      .catch(e => toast(e.message, 'error'));
+  };
+  window.toggleBan = async (id, isBanned) => {
+    if (!confirm2(isBanned ? 'Unban this user?' : 'Ban this user?')) return;
+    try { await api('PATCH', `/users/${id}/ban`, { banned: !isBanned }); toast('Updated', 'success'); loadUsers(el); }
+    catch(e) { toast(e.message, 'error'); }
+  };
+}
+
+// ── TAB: Lab Reports ─────────────────────────────────────────
+async function loadLabs(el) {
+  let filter = 'all';
+  let labs = [];
+
+  async function fetchAndRender(f) {
+    filter = f;
+    el.innerHTML = '<div style="display:flex;justify-content:center;padding:32px;"><div class="spinner"></div></div>';
+    labs = await api('GET', `/labs${f !== 'all' ? '?status=' + f : ''}`).catch(() => []);
+    render();
+  }
+
+  function render() {
+    el.innerHTML = `
+      <div class="section-header">
+        <h2>Lab Reports (${labs.length})</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-sm btn-danger" id="purgeBtn">🗑 Purge All Lab Images</button>
+        </div>
+      </div>
+      <div class="section-tabs">
+        ${['all','processing','extracted','confirmed','error'].map(s =>
+          `<button class="s-tab ${filter===s?'active':''}" data-f="${s}">${s === 'all' ? 'All' : s}</button>`
+        ).join('')}
+      </div>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>User</th><th>Cat</th><th>Date</th><th>Lab</th><th>Status</th><th>Values</th><th>Doc</th><th></th></tr></thead>
+        <tbody>
+          ${labs.length === 0 ? '<tr><td colspan="8" class="empty">No lab results.</td></tr>' :
+            labs.map(l => `
+              <tr>
+                <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.user_email}</td>
+                <td>${l.cat_name}</td>
+                <td style="color:var(--muted)">${fmtDate(l.test_date)}</td>
+                <td>${l.lab_name || '—'}</td>
+                <td>${statusBadge(l.status)}</td>
+                <td style="text-align:center">${l.value_count}</td>
+                <td>${l.document_url ? `<a href="${l.document_url}" target="_blank">View</a>` : '—'}</td>
+                <td><button class="btn btn-sm btn-danger" onclick="deleteLab('${l.id}')">Delete</button></td>
+              </tr>
+            `).join('')}
+        </tbody>
+      </table>
+      </div>
+    `;
+    el.querySelectorAll('.s-tab').forEach(b => b.addEventListener('click', () => fetchAndRender(b.dataset.f)));
+    el.querySelector('#purgeBtn').addEventListener('click', purgeImages);
+  }
+
+  await fetchAndRender('all');
+
+  window.deleteLab = async (id) => {
+    if (!confirm2('Delete this lab result and its stored image?')) return;
+    try { await api('DELETE', `/labs/${id}`); toast('Lab deleted', 'success'); fetchAndRender(filter); }
+    catch(e) { toast(e.message, 'error'); }
+  };
+  async function purgeImages() {
+    if (!confirm2('Delete ALL stored lab images from storage? Lab records and extracted values are kept.')) return;
+    try { const r = await api('POST', '/labs/purge-images'); toast(r.message, 'success'); fetchAndRender(filter); }
+    catch(e) { toast(e.message, 'error'); }
+  }
+}
+
+// ── TAB: Subscriptions ────────────────────────────────────────
+async function loadSubs(el) {
+  const subs = await api('GET', '/subscriptions').catch(() => []);
+  el.innerHTML = `
+    <div class="section-header">
+      <h2>Subscriptions (${subs.length})</h2>
+    </div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Started</th><th>Expires</th><th>Ref</th><th></th></tr></thead>
+      <tbody>
+        ${subs.length === 0 ? '<tr><td colspan="7" class="empty">No subscriptions.</td></tr>' :
+          subs.map(s => `
+            <tr>
+              <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.user_email}</td>
+              <td>${statusBadge(s.plan)}</td>
+              <td>${statusBadge(s.status)}</td>
+              <td style="color:var(--muted)">${fmtDate(s.started_at)}</td>
+              <td style="color:${s.expires_at && new Date(s.expires_at)<new Date()?'var(--danger)':'var(--muted)'}">${fmtDate(s.expires_at)}</td>
+              <td style="color:var(--muted);font-size:11px">${s.payment_ref || '—'}</td>
+              <td>${s.status === 'active' ? `<button class="btn btn-sm btn-danger" onclick="cancelSub('${s.id}')">Cancel</button>` : ''}</td>
+            </tr>
+          `).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+  window.cancelSub = async (id) => {
+    if (!confirm2('Cancel this subscription?')) return;
+    try { await api('PATCH', `/subscriptions/${id}/cancel`); toast('Cancelled', 'success'); loadSubs(el); }
+    catch(e) { toast(e.message, 'error'); }
+  };
+}
+
+// ── TAB: Vouchers ─────────────────────────────────────────────
+async function loadVouchers(el) {
+  let vouchers = await api('GET', '/vouchers').catch(() => []);
+
+  function render() {
+    el.innerHTML = `
+      <div class="section-header"><h2>Vouchers (${vouchers.length})</h2></div>
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="font-size:13px;color:var(--muted);margin-bottom:12px;">Create New Voucher</h3>
+        <div class="form-row">
+          <div class="form-field"><label>Code *</label><input id="vCode" placeholder="LAUNCH50" style="text-transform:uppercase;"></div>
+          <div class="form-field"><label>Discount % *</label><input id="vDiscount" type="number" min="1" max="100" placeholder="50"></div>
+          <div class="form-field"><label>Max Uses (blank = ∞)</label><input id="vMax" type="number" min="1" placeholder=""></div>
+          <div class="form-field"><label>Expires (blank = never)</label><input id="vExpires" type="date"></div>
+          <div class="form-field" style="display:flex;align-items:flex-end;">
+            <button class="btn btn-primary" id="createVoucher" style="width:100%;">Create</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Code</th><th>Discount</th><th>Used / Max</th><th>Expires</th><th>Active</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+          ${vouchers.length === 0 ? '<tr><td colspan="7" class="empty">No vouchers.</td></tr>' :
+            vouchers.map(v => `
+              <tr>
+                <td><strong style="letter-spacing:.5px;">${v.code}</strong></td>
+                <td>${v.discount_percent}%${v.discount_percent===100?' (FREE)':''}</td>
+                <td>${v.used_count} / ${v.max_uses ?? '∞'}</td>
+                <td style="color:var(--muted)">${fmtDate(v.expires_at)}</td>
+                <td>
+                  <label class="toggle">
+                    <input type="checkbox" ${v.is_active?'checked':''} onchange="toggleVoucher('${v.id}')">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </td>
+                <td style="color:var(--muted)">${fmtDate(v.created_at)}</td>
+                <td><button class="btn btn-sm btn-danger" onclick="deleteVoucher('${v.id}')">Delete</button></td>
+              </tr>
+            `).join('')}
+        </tbody>
+      </table>
+      </div>
+    `;
+
+    el.querySelector('#vCode').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase(); });
+    el.querySelector('#createVoucher').addEventListener('click', async () => {
+      const code = el.querySelector('#vCode').value.trim();
+      const discount = Number(el.querySelector('#vDiscount').value);
+      const max = el.querySelector('#vMax').value;
+      const expires = el.querySelector('#vExpires').value;
+      if (!code || !discount) { toast('Code and discount are required', 'error'); return; }
+      try {
+        const v = await api('POST', '/vouchers', { code, discount_percent: discount, max_uses: max || null, expires_at: expires || null });
+        vouchers.unshift(v);
+        toast('Voucher created', 'success');
+        render();
+      } catch(e) { toast(e.message, 'error'); }
+    });
+  }
+
+  render();
+
+  window.toggleVoucher = async (id) => {
+    try { const v = await api('PATCH', `/vouchers/${id}/toggle`); const i = vouchers.findIndex(x => x.id===id); if(i>=0) vouchers[i]=v; render(); }
+    catch(e) { toast(e.message, 'error'); }
+  };
+  window.deleteVoucher = async (id) => {
+    if (!confirm2('Delete this voucher?')) return;
+    try { await api('DELETE', `/vouchers/${id}`); vouchers = vouchers.filter(v => v.id !== id); render(); toast('Deleted', 'success'); }
+    catch(e) { toast(e.message, 'error'); }
+  };
+}
+
+// ── TAB: Pricing ─────────────────────────────────────────────
+async function loadPricing(el) {
+  let pricing = await api('GET', '/pricing').catch(() => ({ basic_idr: 35000, premium_idr: 49000, testing_mode: false, min_price_idr: 35000 }));
+
+  el.innerHTML = `
+    <div style="max-width:480px;">
+      <div class="section-header"><h2>Pricing Configuration</h2></div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div>
+            <div style="font-weight:600;margin-bottom:4px;">Testing Mode</div>
+            <div style="font-size:12px;color:var(--muted);">Price = Rp 0, subscriptions granted instantly. Use for production testing.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="testingMode" ${pricing.testing_mode ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Basic Plan Price (IDR)</label>
+            <input type="number" id="basicPrice" value="${pricing.basic_idr}" min="0" step="1000">
+          </div>
+          <div class="form-field">
+            <label>Premium Plan Price (IDR)</label>
+            <input type="number" id="premiumPrice" value="${pricing.premium_idr}" min="0" step="1000">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Minimum Price Allowed (IDR)</label>
+            <input type="number" id="minPrice" value="${pricing.min_price_idr}" min="0" step="1000">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Applies after voucher discount. Set 0 to allow free subscriptions via vouchers.</div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg3);border-radius:var(--radius);padding:12px;margin-top:8px;margin-bottom:16px;font-size:12px;color:var(--muted);">
+          <strong style="color:var(--text);">Price scenarios:</strong><br>
+          • Testing mode ON → Rp 0 always<br>
+          • 100% voucher + min price = 0 → Rp 0 (free)<br>
+          • 100% voucher + min price = 35000 → Rp 35,000 still charged<br>
+          • No voucher → base price
+        </div>
+
+        <button class="btn btn-primary" id="savePricing">Save Pricing</button>
+        <div id="pricingMsg" style="margin-top:10px;font-size:13px;"></div>
+      </div>
+    </div>
+  `;
+
+  el.querySelector('#savePricing').addEventListener('click', async () => {
+    const btn = el.querySelector('#savePricing');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      const updated = await api('PUT', '/pricing', {
+        basic_idr: Number(el.querySelector('#basicPrice').value),
+        premium_idr: Number(el.querySelector('#premiumPrice').value),
+        testing_mode: el.querySelector('#testingMode').checked,
+        min_price_idr: Number(el.querySelector('#minPrice').value),
+      });
+      pricing = updated;
+      toast('Pricing saved', 'success');
+      el.querySelector('#pricingMsg').innerHTML = `<span style="color:var(--success)">✓ Saved. Testing mode: <strong>${updated.testing_mode ? 'ON' : 'OFF'}</strong></span>`;
+    } catch(e) { toast(e.message, 'error'); }
+    btn.disabled = false; btn.textContent = 'Save Pricing';
+  });
+}
+
+// ── TAB: Danger Zone ─────────────────────────────────────────
+function loadDanger(el) {
+  el.innerHTML = `
+    <div style="max-width:520px;">
+      <div class="section-header"><h2>⚠️ Danger Zone</h2></div>
+
+      <div class="card" style="border-color:var(--danger);">
+        <h3 style="color:var(--danger);font-size:15px;margin-bottom:8px;">Reset Platform — Clean Slate</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+          Deletes <strong style="color:var(--text);">all</strong> platform data permanently.
+          Use this to reset to a blank state before a new test run.
+        </p>
+
+        <div style="background:var(--bg3);border-radius:var(--radius);padding:14px;margin-bottom:16px;font-size:13px;">
+          <div style="font-weight:600;margin-bottom:8px;">What gets deleted:</div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px;color:var(--muted);">
+            <li>🐱 All cat profiles</li>
+            <li>🧪 All lab results &amp; extracted values</li>
+            <li>🛒 All purchase logs &amp; vet visits</li>
+            <li>💬 All chat sessions</li>
+            <li>💳 All subscriptions</li>
+            <li>🗂 All stored files in Supabase Storage</li>
+          </ul>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;user-select:none;">
+            <input type="checkbox" id="includeUsers" style="width:16px;height:16px;accent-color:var(--danger);">
+            <span>Also delete all user accounts <span style="color:var(--muted);">(cannot be undone)</span></span>
+          </label>
+        </div>
+
+        <div style="background:var(--bg);border:1px solid var(--border);padding:2px;border-radius:var(--radius);margin-bottom:16px;">
+          <div style="font-size:11px;color:var(--muted);padding:8px 10px 4px;">What is NOT deleted:</div>
+          <div style="font-size:12px;color:var(--muted);padding:0 10px 8px;">Vouchers · Pricing config · Admin secret</div>
+        </div>
+
+        <button class="btn btn-danger" id="openResetModal" style="width:100%;padding:10px;">
+          Reset Platform for Clean Slate Testing
+        </button>
+      </div>
+    </div>
+  `;
+
+  el.querySelector('#openResetModal').addEventListener('click', () => {
+    const includeUsers = el.querySelector('#includeUsers').checked;
+    showResetModal(includeUsers);
+  });
+}
+
+function showResetModal(includeUsers) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--danger);border-radius:var(--radius);padding:28px;width:100%;max-width:420px;">
+      <div style="font-size:32px;text-align:center;margin-bottom:12px;">⚠️</div>
+      <h2 style="text-align:center;color:var(--danger);margin-bottom:8px;font-size:18px;">Confirm Platform Reset</h2>
+      <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px;line-height:1.6;">
+        This will permanently delete all ${includeUsers ? 'users and their ' : ''}data.<br>
+        <strong style="color:var(--text);">This cannot be undone.</strong>
+      </p>
+
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Re-enter your admin secret to confirm:</label>
+        <input type="password" id="resetSecret" placeholder="Admin secret..." style="
+          width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+          padding:10px 12px;border-radius:var(--radius);font-size:14px;outline:none;
+          font-family:inherit;box-sizing:border-box;
+        " autocomplete="off">
+        <div id="resetSecretErr" style="font-size:12px;color:var(--danger);margin-top:4px;min-height:16px;"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button id="cancelReset" class="btn" style="flex:1;">Cancel</button>
+        <button id="confirmReset" class="btn btn-danger" style="flex:2;opacity:.4;cursor:not-allowed;" disabled>
+          Reset Everything
+        </button>
+      </div>
+      <div id="resetProgress" style="margin-top:14px;display:none;font-size:13px;text-align:center;color:var(--muted);">
+        <div class="spinner" style="margin:0 auto 8px;"></div>
+        Resetting platform...
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const secretInput = overlay.querySelector('#resetSecret');
+  const confirmBtn  = overlay.querySelector('#confirmReset');
+  const errEl       = overlay.querySelector('#resetSecretErr');
+
+  // Enable button only when something is typed
+  secretInput.addEventListener('input', () => {
+    const hasValue = secretInput.value.length > 0;
+    confirmBtn.disabled = !hasValue;
+    confirmBtn.style.opacity = hasValue ? '1' : '.4';
+    confirmBtn.style.cursor  = hasValue ? 'pointer' : 'not-allowed';
+    errEl.textContent = '';
+  });
+
+  overlay.querySelector('#cancelReset').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  confirmBtn.addEventListener('click', async () => {
+    const enteredSecret = secretInput.value;
+    confirmBtn.disabled = true;
+    overlay.querySelector('#resetProgress').style.display = 'block';
+
+    try {
+      const result = await api('POST', '/reset', {
+        confirm_secret: enteredSecret,
+        include_users: includeUsers,
+      });
+
+      overlay.innerHTML = `
+        <div style="background:var(--bg2);border:1px solid var(--success);border-radius:var(--radius);padding:28px;width:100%;max-width:420px;text-align:center;">
+          <div style="font-size:40px;margin-bottom:12px;">✅</div>
+          <h2 style="color:var(--success);margin-bottom:12px;">Platform Reset Complete</h2>
+          <div style="font-size:13px;color:var(--muted);text-align:left;background:var(--bg3);border-radius:var(--radius);padding:12px;margin-bottom:20px;">
+            ${Object.entries(result.results).map(([k, v]) =>
+              `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);">
+                <span>${k.replace(/_/g,' ')}</span>
+                <span style="color:${String(v).startsWith('error') ? 'var(--danger)' : 'var(--success)'}">${v}</span>
+              </div>`
+            ).join('')}
+          </div>
+          <button class="btn btn-primary" id="resetDoneBtn">Back to Dashboard</button>
+        </div>
+      `;
+      overlay.querySelector('#resetDoneBtn').addEventListener('click', () => {
+        overlay.remove();
+        loadTab('dashboard');
+      });
+    } catch (err) {
+      errEl.textContent = err.message === 'Invalid admin credentials'
+        ? 'Wrong secret — try again'
+        : err.message;
+      overlay.querySelector('#resetProgress').style.display = 'none';
+      confirmBtn.disabled = false;
+      confirmBtn.style.opacity = '1';
+    }
+  });
+
+  setTimeout(() => secretInput.focus(), 50);
+}
+
+// ── Tab loader map ────────────────────────────────────────────
+const LOADERS = {
+  dashboard: loadDashboard,
+  users:     loadUsers,
+  labs:      loadLabs,
+  subs:      loadSubs,
+  vouchers:  loadVouchers,
+  pricing:   loadPricing,
+  danger:    loadDanger,
+};
+</script>
+</body>
+</html>
